@@ -1,0 +1,14 @@
+{
+  "name": "buck2bar",
+  "version": "1.0.0",
+  "description": "## Overview Buck2Bar is a web application that showcases a simple interface using the latest version of Bootstrap. This project serves as a starting point for building responsive and modern web applications.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "^30.0.5"
+  }
+}
