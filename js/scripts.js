@@ -1,24 +1,20 @@
-// input with id "username" on change
-document.getElementById("username").addEventListener("input", function () {
-  var username = this.value;
-  // regex to check if username has at least 1 capital letter, 1 special character, 1 number and is at least 8 characters long
-  var regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&~])[A-Za-z\d@$!%*?&~]{8,}$/;
+// Use modern JavaScript (ES6+) features
 
-  if (regex.test(username)) {
-    // set the username input border to green
-    this.style.borderColor = "green";
-  } else {
-    // set the username input border to red
-    this.style.borderColor = "red";
-  }
+// Username input validation
+document.getElementById("username")?.addEventListener("input", function () {
+  const username = this.value;
+  // Regex: at least 1 capital, 1 special, 1 number, min 8 chars
+  const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&~])[A-Za-z\d@$!%*?&~]{8,}$/;
+  this.style.borderColor = regex.test(username) ? "green" : "red";
 });
 
-document.addEventListener("DOMContentLoaded", function () {
-  var chartTab = document.getElementById("chart-tab");
-  var chartInitialized = false;
-  chartTab.addEventListener("shown.bs.tab", function () {
+document.addEventListener("DOMContentLoaded", () => {
+  const chartTab = document.getElementById("chart-tab");
+  let chartInitialized = false;
+
+  chartTab?.addEventListener("shown.bs.tab", () => {
     if (!chartInitialized) {
-      var ctx = document.getElementById("barChart").getContext("2d");
+      const ctx = document.getElementById("barChart").getContext("2d");
       window.barChart = new Chart(ctx, {
         type: "bar",
         data: {
@@ -52,73 +48,21 @@ document.addEventListener("DOMContentLoaded", function () {
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          scales: {
-            y: { beginAtZero: true },
-          },
+          scales: { y: { beginAtZero: true } },
         },
       });
       chartInitialized = true;
     }
-    // Always update chart data with current form values when tab is shown
     updateBarChartWithFormData();
   });
+
+  // Integrate Send Email button with sendChartByEmail
+  const sendEmailBtn = document.getElementById("sendEmailBtn");
+  if (sendEmailBtn) {
+    sendEmailBtn.addEventListener("click", sendChartByEmail);
+  }
 });
 
-function getMonthlyIncomeExpenses() {
-  const months = [
-    "january",
-    "february",
-    "march",
-    "april",
-    "may",
-    "june",
-    "july",
-    "august",
-    "september",
-    "october",
-    "november",
-    "december",
-  ];
-  const data = {};
-  months.forEach((month) => {
-    const incomeInput = document.getElementById(`${month}-income`);
-    const expensesInput = document.getElementById(`${month}-expenses`);
-    data[month] = {
-      income: incomeInput ? Number(incomeInput.value) : 0,
-      expenses: expensesInput ? Number(expensesInput.value) : 0,
-    };
-  });
-  return data;
-}
-
-function updateBarChartWithFormData() {
-  if (!window.barChart) return;
-  const monthlyData = getMonthlyIncomeExpenses();
-  const months = [
-    "january",
-    "february",
-    "march",
-    "april",
-    "may",
-    "june",
-    "july",
-    "august",
-    "september",
-    "october",
-    "november",
-    "december",
-  ];
-  // Set the data arrays for income and expenses
-  window.barChart.data.datasets[0].data = months.map(
-    (m) => monthlyData[m].income
-  );
-  window.barChart.data.datasets[1].data = months.map(
-    (m) => monthlyData[m].expenses
-  );
-  window.barChart.update();
-}
-
-// Add event listeners to update chart live when inputs change
 const months = [
   "january",
   "february",
@@ -133,18 +77,70 @@ const months = [
   "november",
   "december",
 ];
+
+const getMonthlyIncomeExpenses = () =>
+  Object.fromEntries(
+    months.map((month) => [
+      month,
+      {
+        income: Number(document.getElementById(`${month}-income`)?.value || 0),
+        expenses: Number(
+          document.getElementById(`${month}-expenses`)?.value || 0
+        ),
+      },
+    ])
+  );
+
+function updateBarChartWithFormData() {
+  if (!window.barChart) return;
+  const monthlyData = getMonthlyIncomeExpenses();
+  window.barChart.data.datasets[0].data = months.map(
+    (m) => monthlyData[m].income
+  );
+  window.barChart.data.datasets[1].data = months.map(
+    (m) => monthlyData[m].expenses
+  );
+  window.barChart.update();
+}
+
+// Live update chart on input changes
 months.forEach((month) => {
   ["income", "expenses"].forEach((type) => {
-    const input = document.getElementById(`${month}-${type}`);
-    if (input) {
-      input.addEventListener("input", updateBarChartWithFormData);
-    }
+    document
+      .getElementById(`${month}-${type}`)
+      ?.addEventListener("input", updateBarChartWithFormData);
   });
 });
+
 function downloadChart() {
-  var canvas = document.getElementById("barChart");
-  var link = document.createElement("a");
+  const canvas = document.getElementById("barChart");
+  const link = document.createElement("a");
   link.href = canvas.toDataURL("image/png");
   link.download = "buck2bar-chart.png";
   link.click();
+}
+
+function sendChartByEmail() {
+  const emailInput = document.getElementById("userEmail");
+  const email = emailInput?.value.trim();
+  if (!email || !/^[^@]+@[^@]+\.[^@]+$/.test(email)) {
+    alert("Please enter a valid email address.");
+    emailInput?.focus();
+    return;
+  }
+  const canvas = document.getElementById("barChart");
+  if (!canvas) {
+    alert("Chart not found.");
+    return;
+  }
+  const imageData = canvas.toDataURL("image/png");
+  // Change fetch URL to point to your Express server (adjust port if needed)
+  fetch("http://localhost:3000/send-chart-email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, imageData }),
+  })
+    .then((res) => res.json())
+    .then((data) => alert(data.message || "Email sent!"))
+    .catch(() => alert("Failed to send email."));
 }
